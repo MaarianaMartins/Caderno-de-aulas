@@ -1,0 +1,8 @@
+"0","mg |>"
+"0","  group_by(trat) |> "
+"0","  summarise(mean_comp = mean(comp), sd_comp = sd(comp)) |> "
+"0","  ggplot(aes(trat, mean_comp))+"
+"0","  geom_col(fill = ""steelblue"", width = 0.5)+"
+"0","  geom_errorbar(aes(ymin = mean_comp - sd_comp,"
+"0","                    ymax = mean_comp + sd_comp),"
+"0","                width = 0.1)"

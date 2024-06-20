@@ -1,0 +1,6 @@
+"0","cr |> "
+"0","  count(farm_management, cultivar) |> "
+"0","  ggplot(aes(cultivar, n, fill = farm_management))+"
+"0","  geom_col(position = ""dodge"") +"
+"0","  scale_fill_calc()+"
+"0","  facet_wrap(~cultivar, scales = ""free_x"")"

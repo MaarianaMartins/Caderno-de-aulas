@@ -1,0 +1,4 @@
+"0","pepper |> "
+"0","  pivot_longer(2:4,"
+"0","               names_to = ""Epidemic"","
+"0","               values_to = ""inc"")"

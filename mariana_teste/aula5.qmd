@@ -1,0 +1,150 @@
+---
+title: "Aula 5- sumariza e criar gráficos"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+#Sumarização de dados e apresentação deles Para carregar dados de uma planilha online é necessário abrir o pacote que está dentro da biblioteca gsheet, após isso usa a função gsheet2tbl para puxar os dados da planilha usando um link.
+
+```{r}
+library (gsheet)
+ns <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1092065531")
+
+```
+
+Precisamos analisar os valores de média e mediana para entender melhor os dados antes de fazer a visualização deles com o uso do gráfico. Pode ser observado que os valores médio das provas 1 foram de 79,5 com uma mediana de 85,7 e um desvio padrão de 19. Sendo que os valores variavam entre 42,9 e 100 pontos. Para os valores médio das provas 2 foram de 79,26, com uma mediana de 84,37 e um desvio padrão de 19,70. Sendo que os valores variaram de 43,75 até 100 pontos.
+
+```{r}
+library(tidyverse)
+ns|>
+  group_by(prova) |> 
+  summarise(nota_mean = mean(nota),
+            nota_med = median(nota),
+            nota_sd = sd(nota))
+```
+
+Para visualizar os dados e comunicá-los em forma de gráfico é necessário abrir a bibilioteca do ggthemes, após isso escolheremos o tipo de gráfico que queremos, nesse primeiro momento, será escolhido o gráfico de histrograma.
+
+```{r}
+library (ggthemes)
+ns |>
+ggplot (aes(x= nota)) +
+geom_histogram(bins = 5, fill = "darkred", color = "white")+
+  facet_wrap(~prova) +
+  scale_fill_colorblind() +
+  theme_bw() +
+  labs(x = "Nota",
+       y = "Frequency")
+```
+
+#Separação dos dados para criar subconjunto
+
+```{r}
+library(ggplot2)
+notas1 <- ns |>
+  select(prova, nota) |>
+  filter(prova == 1)
+notas1
+
+notas2 <- ns |>
+  select(prova, nota) |>
+  filter(prova == 2)
+notas2
+
+notas1 |>
+  count (nota)
+
+notas2|>
+  count(nota)
+  
+```
+
+#Criação de gráficos separados para cada subconjunto criado
+
+```{r}
+library(ggthemes)
+notas1 |>
+  ggplot(aes(x = nota)) +
+  geom_histogram(bins = 5, fill = "darkblue", color = "white") +
+  scale_fill_colorblind() +
+  theme_bw() +
+  labs(title = "Prova 1", 
+        x = "Nota", 
+        y= "Frequency")
+notas1
+
+notas2 |>
+  ggplot(aes(x = nota)) +
+  geom_histogram(bins = 5, fill = "darkred",color = "white") +
+  scale_fill_colorblind() +
+  theme_bw() +
+  labs (title = "Prova 2",
+        x = "Nota", 
+        y= "Frequency")
+notas2
+
+```
+
+#Para juntar os gráficos de dois subconjuntos em um único gráfico
+
+```{r}
+p1 <- notas1 |>
+  ggplot(aes(x = nota)) +
+  geom_histogram(bins = 5, fill = "blue", color = "White")  +
+  theme_bw() +
+  labs(title = "Prova 1", 
+       x = "Nota", 
+       y = "Frequency") +
+  geom_vline(xintercept = 79.54545, linetype = "dashed", color = "red", size = 1) +
+  ylim(0,10)
+
+p2 <- notas2 |> 
+  ggplot(aes(x = nota)) +
+  geom_histogram(bins = 5, fill = "green", color = "White") + 
+  theme_bw() +
+  labs(title = "Prova 2",
+       x = "Nota",
+       y = "") +
+  geom_vline(xintercept = 79.26136, linetype = "dashed", color = "red", size = 1) +
+  ylim(0,10)
+
+library(patchwork)
+(p1 + p2) +
+  plot_layout(guides = "collect",
+            axes = "collect") 
+```
+
+#A partir da visualização dos dados, é possível criar quantos gráficos quiser e também se aplicarem ao conjuntos de valores. Para o próximo gráfico, iremos criar um gráfico de boxplot.
+
+```{r}
+library(ggplot2)
+ns |> 
+  ggplot(aes(factor (prova), nota)) + 
+  geom_boxplot(fill = "purple") +
+  geom_jitter(width = 0.05)+
+  theme_bw() +
+  labs(x = "Frequency",
+       y = "Provas")
+```
+
+#Quando se tem poucas amotras e tratamentos, pode-se usar o gráfico de pontos com a utilização de um intervalo de confiança para detalhar o intervalo em que as médias utilizadas se encontram.
+
+```{r}
+library(ggplot2)
+ns |>
+  group_by(prova) |>
+  summarise(nota_mean = mean(nota),
+            nota_sd = sd(nota)) |>
+  ggplot(aes(factor(prova), nota_mean, color =prova)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = nota_mean - nota_sd, 
+                    ymax = nota_mean + nota_sd),
+                width = 0.1) +
+  theme_bw()+
+  theme(legend.position = "none") +
+  ylim(0,100) +
+  labs(x = "Prova",
+       y= "Frequency")
+```

@@ -1,0 +1,331 @@
+---
+title: "Aula 6 e 7- Estatística inferencial: ANOVA e teste de médias"
+format: html
+editor: visual
+message: false 
+warning: false
+---
+
+#Hoje iremos trabalhar com a estatística inferencial \$ usado para puxar o dado de uma coluna dentro daquele conjunto de dados; \~ usar um fator em função do outro.
+
+```{r}
+library(gsheet)
+mg <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=983033137")
+
+```
+
+#Visualização dos dados Para esse conjunto de dados, nós temos um fator e dois níveis do fator (com e sem Mg). Efeito do magnésio reduzindo o tamanho da lesão, a aplicação de magnésio está induzindo uma reação de indução de resistência. O tamanho da lesão se encontra maior no tratamento controle. Para publicar esse trabalho, precisa testar uma hípotese "com a suplementação de magnésio nós temos uma redução do tamanho da doença" (hípotes experimental), e a hípotes nula nos diz que as médias não diferem (hípotese estatística). No gráfico, vemos um box bem simétrico e uma boa diferença entre as medianas, demonstrando que há possibilidade de existir a diferença.Já da uma indicativa de normalidade por causa da simetria do box, por isso é indicado para muitos tratamentos pela facilidade de visualização.\
+Para verificar a diferença ou não, usaremos o teste t (teste mais simples, geralmente utilizado com dois grupos, se estiver a mais temos que fazer uma comparação par a par) uma vez que temos poucos tratamentos, assumindo que existe normalidade dos dados e homogeinidade entre as variâncias. 10 plantas que recebem um tratamento e 10 plantas que recebem outro, o que as torna variáveis independentes.
+
+```{r}
+library(tidyverse)
+mg |> 
+  ggplot(aes(trat,comp)) + 
+  geom_boxplot()
+```
+
+#Realizar a estatística Para usar o teste t nós precisamos dos vetores separados. Uma vez que o conjunto está no formato longo, precisamos passar para o formato largo. O \$ faz a separação das colunas a partir do momento que nós "chamamos" elas. Teste não pareado. Não há depêndencia. Para calcular a normalidade, nós precisamos usar um teste não parametrico. Sendo o p-valor menor do que 0,05, nós rejeitamos H0, até agora o teste t está indicando opções corretas, porém é necessário sabermos se podemos confiar nele. Aplica-se o teste de shapiro wilk para o controle, dado o p-valor, nós podemos aceitar que a distribuição é normal. A hípotese nula é a normalidade e a alternativa é a normal, se ele der maior que 0,05 nós aceitamos a normalidade (aceitando H0). O comprimento é uma varíavel númerica contínua. Se o valor do F é baixo, significa que ele está perto do 0, está situado no meio da curva, nem tão pra direita ou pra esquerda, significa que as variâncias são homogeneas, aceitamos H0 de que ela é homogênea. A partir do teste das variâncias "var.test", significa que podemos seguir com o teste t. Se fosse heterogênea, teríamos que justificar que elas são falsas no argumento do t.test (var.equal = FALSE). Típico caso de uma análise parametrica. Podemos também fazer um qqplot para ver se os dados obedecem a linha de tendência, se a maioria dos pontos cair em cima da linha, podemos aceitar também a normalidade dos dados (foi confirmado pelo shapiro test). Podemos usar a função da biblioteca report que pode ser usado como relato em forma de texto da saída do teste t.
+
+```{r}
+mg2 <- mg |> 
+  pivot_wider(names_from = trat, 
+              values_from = comp)
+t.test(mg2$Mg2, mg2$control)
+
+shapiro.test(mg2$control)
+shapiro.test(mg2$Mg2)
+
+hist(mg2$control)
+hist(mg2$Mg2)
+
+qqnorm(mg2$control)
+qqline(mg2$control)
+
+var.test(mg2$control, mg2$Mg2)
+
+teste1 <- t.test(mg2$Mg2, mg2$control)
+
+library(report)
+report(teste1)
+
+```
+
+#Dois grupos dependentes Para esse próximo conjunto de teste, temos um teste em formato longo e será um teste pareado, com depêndencia entre os dados. O teste de shapiro wilk mostra a normalidade dos dados, dado que o p-valor é maior do que 0,05 aceitando a H0 e que os dados são normais. Considera-se então que podemos usar o teste t. Através do teste de variância e da análise do box plot, e a partir do p-valor que é menor do que 0,05 rejeitamos H0 e aceitamos que as variâncias são heterogêneas. Se a procentagem do intervalo de confiança não tem o valor 0 no meio, já pode tomar os dados como significativo.
+
+```{r}
+library(gsheet)
+escala <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1729131173")
+
+escala |> 
+  ggplot(aes(assessment, acuracia)) +
+  geom_boxplot()
+
+escala2 <- escala |>
+  select(assessment, rater, acuracia) |>
+  pivot_wider(names_from = assessment,
+              values_from = acuracia)
+t.test(escala2$Aided1, escala2$Unaided,
+       paired = TRUE,
+       var.equal = FALSE)
+
+shapiro.test(escala2$Unaided)
+shapiro.test(escala2$Aided1)
+
+hist(escala2$Unaided)
+hist(escala2$Aided1)
+
+var.test(escala2$Unaided, escala2$Aided1)
+
+#rever a interpretação
+```
+
+#Teste não paramétrico Utilizado por que o teste de shapiro wilk não deu a normalidade dos dados. Geralmente, os testes paramétricos têm mais poder, mas utilizar o paramétrico ou o não paramétrico está correto os dois tipos de testes desde que você siga as premissas para a utilização de cada teste. Teste t pode ser pareado "true" ou não pareado "false", dependência ou não dependência. No wilcox não existe não pareado, só o pareado "true" ou "False", por que usou o pareado para esse conjunto de dados? Por que o mesmo "fator" foi avaliado duas vezes por uma mesma pessoa, dando a entender uma relação de dependência entre os dados. O wilcox teste é o equivalente não paramétrico do teste t.
+
+```{r}
+wilcox.test(escala2$Aided1,
+            escala2$Unaided,
+            paired = TRUE)
+```
+
+# Três ou mais grupos
+
+```{r}
+library(gsheet)
+micelial <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=959387827")
+```
+
+Usou o geom_jitter por que tem menos de 10 repetições e é legal visualizar os dados um a um. A anova vai testar se existe diferença entre as médias, testando a variabilidade dentro do grupo e entre os grupos. O teste F é a razão entre grupos divididos pela variância dentro de cada grupo, o teste F da menor se a variância entre o grupo é menor, se ela for maior o valor de F vai ser muito alto que vai diminuir o valor p e a probabilidade de achar diferença vai ser muito pequena.
+
+```{r}
+micelial |>
+  ggplot(aes(especie, tcm)) +
+  geom_jitter(width = 0.05)
+  
+```
+
+Trabalhando os dados na ANOVA A função "anova" vai gerar o quadro da anova. A variabilidade entre grupos/variabilidade dentro do grupo da o teste F. Baseado no valor de F calculado (Pr (\>F)) é maior do que 0,05 então aceitamos H0. Quanto maior o valor de F, menor o valor de P. Em relação a normalidade, os resíduos estão ok. O pacote DHARMa vai nos dar uma visão geral sobre a confiabilidade dos dados, do mesmo jeito que os testes de normalidade da variancia e dos dados, vai reunir todos os dados de verificação em um único local que facilitará a visualização.
+
+```{r}
+m1 <- lm(tcm ~especie -1, data = micelial)
+anova(m1)
+summary(m1)
+ ##m1 <- lm(tcm ~especie -1, data = micelial) adiciona o -1 pra retirar o intercept
+hist(m1$residuals)
+shapiro.test(m1$residuals)
+bartlett.test(tcm ~ especie, data = micelial)
+
+library(emmeans)
+medias1 <- emmeans(m1, ~ especie)
+medias1
+
+library(multcomp)
+library(multcompView)
+cld(medias1)
+
+library(DHARMa)
+plot(simulateResiduals (m1))
+
+library(performance)
+check_normality(m1)
+check_heteroscedasticity(m1)
+check_model(m1)
+```
+
+#Aula 7 O count vai fazer a contagem do número que se repete do elemento no spray A. Os sprays A,B,D,E,F são os níveis do fator inseticida.
+
+```{r}
+theme_set(theme_bw())
+inseticida <- InsectSprays
+library(tidyverse)
+inseticida |>
+  count(spray)
+
+ins <- inseticida |>
+  ggplot(aes(spray,count)) +
+  geom_boxplot() 
+ins
+
+shapiro.test(inseticida$count)
+
+
+```
+
+Primeiro trabalha com os resíduos da anova, ajusta o modelo e pega esses resíduos e aplica então os testes. A maioria das pessoas roda a anova, pega os dados de p-valor e roda os testes, sem rodar as premissas de normalidade e homogeineidade. Porém, o certo é testar as premissas. 1- Podemos fazer uma histograma dos resíduos só para ver como está a sua distribuição.Maneira bem visual de verificar a normalidade e distribuição. 2- o teste do shapiro é mais sensível a qualquer desvio, o pvalor sugere que rejeitemos H0. Então, os dados não são normais. 3- A análise que tem mais peso é a heterogeinidade das variâncias, muito mais do que a falta de normalidade. 4- Teste de bartlett testa a homogeineidade das variâncias das amostras, de acordo com o bartlett as variâncias são heterogeneas. 5- Pode recorrer as transformações, log(x), log(x=0.5), raiz quadrado (geralmente é uma boa opção para dados discretos/de contagem). O plot do emmeans da as médias estimadas de cada nível do fator.
+
+```{r}
+m1 <- lm(count ~ spray,
+         data = inseticida)
+summary(m1)
+anova(m1)
+
+library(emmeans)
+m1_medias <- emmeans(m1, ~ spray)
+plot(m1_medias)
+library(multcomp)
+cld(m1_medias)
+
+hist(m1$residuals)
+shapiro.test(m1$residuals)
+
+qqnorm(m1$residuals)
+qqline(m1$residuals)
+
+bartlett.test(count ~ spray, 
+              data = inseticida)
+
+library(performance)
+check_normality(m1)
+check_heteroscedasticity(m1)
+```
+
+#Alternativa 1 Agora vamos tentar transformar os dados para torná-los normais. 1- pelo gráfico percebe-se que os dados ficaram um pouco mais normais.
+
+```{r}
+inseticida <- inseticida |>
+  mutate(count2 = sqrt(count)) 
+
+inseticida |> 
+  ggplot(aes(spray, count2)) +
+  geom_boxplot()
+
+library(DHARMa)
+plot(simulateResiduals(m1))
+```
+
+Agora percebe-se que conseguiu normalizar os dados, p-valor de shapiro.test maior que 0,05, aceita H0. Levene test nos residuos do dharma, bartlet test e check_heteroscedasticity para verificar a homogeneidade da variância. A ANOVA é um teste mais resistente/robusto a falta de normalidade do que para homostacidade... O modelo com a transformação houve mais discriminação entre as médias, o valor não transformado favoreceu o erro tipo 1. Com a transformação, houve uma maior discriminação/separação de diferença entre as médias.
+
+```{r}
+m2 <- lm(count2 ~ spray, 
+         data = inseticida)
+summary(m2)
+anova(m2)
+
+library(emmeans)
+m2_medias <- emmeans(m2, ~ spray)
+plot(m2_medias)
+library(multcomp)
+cld(m2_medias)
+
+pairs(m2_medias)
+
+pwpm(m2_medias)
+pwpp(m2_medias)
+
+hist(m2$residuals)
+shapiro.test(m2$residuals)
+
+qqnorm(m2$residuals)
+qqline(m2$residuals)
+
+bartlett.test(count2 ~ spray, 
+              data = inseticida)
+
+library(performance)
+check_normality(m2)
+check_heteroscedasticity(m2)
+
+library(DHARMa)
+plot(simulateResiduals(m2))
+
+#transformação box-cox 
+library(MASS)
+b <- boxcox(lm(inseticida$count+0.1 ~1))
+lambda <- b$x[which.max(b$y)]
+lambda <- 0.5
+#lambda 0.4242424
+
+inseticida$count3 <- (inseticida$count ^ lambda - 1) / lambda 
+inseticida$count3
+
+
+```
+
+#Alternativa 2- utilizar teste paramétrico quando há violação das premissas H0= médias iguais, rejeita hípotese nula por que o p-valor do kruskal teste é menor que 0.05
+
+```{r}
+library(agricolae)
+kruskal.test(count ~ spray, 
+             data = inseticida)
+m3 <- kruskal(inseticida$count,
+        inseticida$spray,
+        group = TRUE)
+m3
+```
+
+#Alternativa 3- modelo 4 -\> GLMs m4_medias \<- emmeans(m4, \~ spray, type = "response") m4_medias -\> demonstra que 95% das vezes a média dos fatores está entre asymp.LCL e asymp.UCL
+
+```{r}
+m4 <- glm(count ~ spray,
+          family = poisson,
+          data = inseticida)
+summary(m4)
+anova(m4)
+
+library(car)
+Anova(m4)
+
+library(DHARMa)
+plot(simulateResiduals(m4))
+
+m4_medias <- emmeans(m4, ~ spray, 
+                     type = "response")
+m4_medias
+
+library(multcomp)
+cld(m4_medias)
+```
+
+#Importação de dados para trabalhar com um experimento fatorial Anova fatorial 2 way
+
+```{r}
+library(gsheet)
+li <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=2023059672")
+```
+
+```{r}
+library(tidyverse)
+g1 <- li |> 
+  ggplot(aes(factor (dose), severity, color = factor(dose))) +
+  geom_jitter(width = 0.1) +
+  facet_wrap(~treat) +
+  theme_bw()
+g1
+```
+
+##Modelo fatorial (two-way anova) A resposta em função de quem? Dos dois fatores. Caso com interação significativa, olhar p-valor, precisa fazer as médias da combinação dos fatores. Tem que fazer uma tabela como essa abaixo e estimar as médias:
+
+```         
+  0,5        2,0
+```
+
+li med Aa med Ab Teb med Ba med Ab
+
+Tem que comparar a dose entre os fungicidas, comparar os fungicidas entre eles e os fungicidas influenciados pelas doses. O mesmo fungicida em duas doses e a mesma dose entre os dois fungicidas. Quando a interação da significativa, tem que realizar os desdobramentos dessa interação. Antes de realizar o teste de média, tem que ser testada as premissas de normalidade e de homogeinidade. O DHARMa diz que não teve problema com a análise dos resíduos. Por que fazer a normalidade e a homogeinidade dos resíduos?
+
+Comparando os dados na coluna, para comparar na linha é necessário trocar o comando.
+
+```         
+   0,5       2,0
+```
+
+LI 0,29 Aa 0,05 Ab TEB 0,02 Ba 0,02 Aa
+
+```{r}
+mf <- lm(severity ~ treat*dose,
+         data = li) 
+mf
+anova(mf)
+plot(simulateResiduals(mf)) #ok pode seguir 
+
+#mf_medias <- emmeans(mf, ~ treat | dose)
+mf_medias <- emmeans(mf, ~ dose | treat)
+cld(mf_medias)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```

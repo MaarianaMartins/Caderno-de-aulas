@@ -1,0 +1,213 @@
+---
+title: "Aula 8- transformações, ANOVA e teste de média"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+# ANOVA com blocos casualizados
+
+## Importa dados
+
+Para cada variável-resposta será feito um ANOVA. Modificar o ANOVA para considerar o bloco como efeito fixo Temos que modificar o número do tratamento e os números do bloco como fatores.
+
+```{r}
+#theme_set(theme_bw())
+library(tidyverse)
+library(gsheet)
+
+soja <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=866852711")
+
+soja <- soja |> 
+  mutate(TRAT = as.factor(TRAT),
+         BLOCO = as.factor(BLOCO))
+```
+
+##Visualizar Gráfico 1 para a variavel DFC Gráfico 2 para a variavel FER Grafico 3 para a variavel PROD
+
+```{r}
+dfc <- soja |> 
+  ggplot(aes(TRAT, DFC))+
+  geom_jitter(width = 0.05, color = "gray70")+
+  stat_summary(fun.data = "mean_cl_boot", color = "black") #A bola preta representa a média e a linha o intervalo de confiança
+dfc
+
+fer <- soja |> 
+  ggplot(aes(TRAT, FER))+
+  geom_jitter(width = 0.1)
+fer
+
+prod <- soja |> 
+  ggplot(aes(TRAT, PROD))+
+  geom_jitter(width = 0.1)
+prod
+
+library(patchwork)
+dfc / fer / prod
+```
+
+## ANOVA DFC
+
+Pvalor indicando com \*\*\* e o valor super baixo, indiccando que o efeito do tratamento é extremamente significativo. Para blocos, não foi significativo. Pode seguir as análises por que pelo menos uma das médias difere uma da outra, agora temos que saber se podemos confiar na anova e testar as suas premissas de normalidade e homosdasticidade.
+
+```{r}
+aov_dfc <- lm(DFC ~ TRAT+BLOCO,  #Bloco entra como efeito fixo ao colocar o "+"
+              data = soja)
+anova(aov_dfc)
+#Grau de liberdade = n-1
+#F é a divisão entre os Mean Square
+# Trat é extremamente significativo
+
+library(performance)
+check_heteroscedasticity(aov_dfc)
+check_normality(aov_dfc)
+
+library(emmeans)
+medias_dfc <- emmeans(aov_dfc, ~ TRAT)
+medias_dfc
+pwpm(medias_dfc)
+
+library(multcomp)
+library(multcompView)
+cld(medias_dfc, Letters = letters)
+
+
+#Eficácia no controle (%) = (1- (emmean do tratamento/emmean da testemunha))*100
+
+```
+
+## ANOVA FER
+
+```{r}
+aov_fer <- lm(FER ~ TRAT+BLOCO,
+              data = soja)
+anova(aov_fer)
+
+library(performance)
+check_heteroscedasticity(aov_fer) #Variância não é homogênea
+check_normality(aov_fer) #Não há normalidade
+
+#Transformação dos dados
+soja <- soja |> 
+  mutate(FER2 = log(FER))
+
+aov_fer2 <- lm(FER2 ~ TRAT+BLOCO,
+               data = soja)
+anova(aov_fer2)
+check_normality(aov_fer2)
+check_heteroscedasticity(aov_fer2) #Ainda não é homogêneo, mas iremos considerar como homogêneo
+
+medias_fer <- emmeans(aov_fer2, ~ TRAT)
+medias_fer
+pwpm(medias_fer)
+
+cld(medias_fer, Letters = letters)
+
+#Tentando arrumar a normalidade por Lambda
+b <- boxcox(lm(soja$FER ~ 1))
+lambda <- b$x[which.max(b$y)]
+lambda
+soja$FER3 <- (soja$FER ^ lambda - 1)/ lambda
+aov_fer3 <- lm(FER3 ~ TRAT+BLOCO,
+              data = soja)
+check_normality(aov_fer3)
+check_heteroscedasticity(aov_fer3)
+medias_fer2 <- emmeans(aov_fer2, ~ TRAT)
+medias_fer2
+pwpm(medias_fer2)
+
+cld(medias_fer2, Letters = letters)
+```
+
+Com os resultados do CLD pode-se fazer uma tabela com as médias e as letrinhas, também o intervalo de confiança e pode omitir o erro padrão... Ou então uma tabelta mais larga com as 3 variaveis, ou então usar um gráfico e colocar as letras nele. Nunca mostrar a tabela e o gráfico, ai é redundância. \## ANOVA PROD
+
+```{r}
+aov_prod <- lm(PROD ~ TRAT+BLOCO,
+              data = soja)
+anova(aov_prod)
+check_heteroscedasticity(aov_prod) #Variância é homogênea
+check_normality(aov_prod) #Há normalidade
+
+medias_prod <- emmeans(aov_prod, ~ TRAT)
+medias_prod
+pwpm(medias_prod)
+cld(medias_prod, Letters = letters)
+medias_prod_grupo <- cld(medias_prod, Letters = letters)
+
+```
+
+Outra forma de visualizar os valores da produtividade
+
+```{r}
+df_prod <- data.frame(medias_prod_grupo)
+df_prod |> 
+  ggplot(aes(TRAT, emmean))+
+  geom_point()+
+  ylim(3000,6500)+
+  geom_errorbar(aes(min = lower.CL,
+                    max = upper.CL),
+                width = 0.1)+
+  annotate(geom = "text", x = 1.1, y = 4200, label = "A")+
+  annotate(geom = "text", x = 2.1, y = 5000, label = "AB")
+
+knitr::kable(df_prod |> dplyr::select(TRAT, emmean, .group))
+library(writexl)
+write_xlsx(df_prod, "df.xlsx")
+
+#Diferença de produtividade = emmean do tratamento - emmean da testemunha
+
+```
+
+Se quiser colocar as letrinhas, tem que usar o anotate e fazer a "colocação" manualmente. Os dados 1 e 6 não tem overleap do intervlao de confiança, já os que tem o overleap ex 1 e 5 estão no mesmo grupo e não diferem estatisticamente. É uma maneira visual de determinar a diferença e fazer o leitor entender.
+
+# Novos dados Curve
+
+```{r}
+theme_set(theme_bw())
+curve <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1807247585")
+curve = as.data.frame(curve)
+
+
+curve |> 
+  group_by(day) |> 
+  summarise(severity_mean = mean(severity),
+            severity_sd = sd(severity)) |> 
+  ggplot(aes(day, severity_mean))+
+  geom_point(width = 0.05)+
+  geom_line()
+
+curve |> 
+  group_by(day, Irrigation) |> 
+  summarise(severity_mean = mean(severity),
+            severity_sd = sd(severity)) |> 
+  ggplot(aes(day, severity_mean, color = Irrigation))+
+  geom_point(width = 0.05)+
+  geom_line()
+
+curve |> 
+  group_by(day, Irrigation) |> 
+  summarise(severity_mean = mean(severity)) |> 
+  ggplot(aes(day, severity_mean))+
+  geom_point(width = 0.05)+
+  geom_line()+
+  facet_grid(~Irrigation)
+
+#Área abaixo da curva
+library(epifitter)
+audpc <- curve |> 
+  group_by(Irrigation, rep) |> 
+  summarise(aacpd = AUDPC(day, severity))
+
+#ANOVA da área debaixo da curva
+aov_audpc <- lm(aacpd ~ Irrigation + factor(rep),
+                data = audpc) 
+anova(aov_audpc)
+  
+aov_curve <- lm(severity ~ Irrigation*day + rep,
+         data = curve)
+anova(aov_curve)
+
+library(agricolae)
+cv.model(aov_audpc) #coeficiente de variação, que é o desvio padrão dividido por 100
+
+```

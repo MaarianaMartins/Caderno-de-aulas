@@ -1,0 +1,148 @@
+---
+title: "Aula 11- Criação de mapas no R"
+format: html
+editor: visual
+message: false 
+warning: false
+---
+
+## 
+
+```{r}
+library(gsheet)
+library(ggplot2)
+library(agricolae)
+library(performance)
+library(tidyverse)
+library(rnaturalearth)
+library(rnaturalearthhires)
+library(ggthemes)
+remotes::install_github("ropensci/rnaturalearthhires")
+```
+
+Primeira camada do geom sf é o país, depois é a camada filtrada com o estado que queremos filtrar.
+
+```{r}
+BRA <- ne_states (country = "Brazil",
+                  returnclass = "sf")
+
+world <- ne_countries()
+
+MG <- BRA |> 
+  filter(name_en == "Minas Gerais")
+
+BA <- BRA |> 
+  filter(name_en == "Bahia")
+
+library(r4pde)
+sbr <- RustSoybean
+sbr |> 
+  ggplot(aes(longitude, latitude)) +
+  geom_point() +
+  coord_sf()
+  
+library(ggspatial)
+
+bra <- ggplot(BRA) +
+  geom_sf(fill = "pink",
+                      color = "white",
+                      linewidth = 1) +
+  geom_sf(data = MG, fill = "darkgreen") +
+  geom_sf(data = BA, fill = "darkgray") +
+  geom_point( data = sbr, aes(longitude, latitude),
+              color = "black") +
+  theme_map() +
+  annotation_north_arrow(which_north = "grid")
+bra
+
+library(plotly)
+ggplotly(bra)
+```
+
+```{r}
+library(leaflet)
+vicosa <- leaflet(sbr) |> 
+  addTiles() |> 
+  #addProviderTiles(providers$Esri.NatGeoWorldMap) |>
+  #setView(lng = -42.8825, lat = -20.7546, zoom = 5) |> 
+  addCircleMarkers(radius = 2)
+vicosa
+```
+
+```{r}
+library(leaflet)
+leaflet(data = BRA) %>% addTiles()
+
+```
+
+```{r}
+cf <-leaflet() |> 
+  addTiles() |> 
+  setView(lng = -40.3224, lat = -10.5113, zoom = 15)
+cf
+
+```
+
+```{r}
+mapa <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1pAIFKsdKxk_UQQXdYwIO-O5NOkYNhpclImJcLziYnk4/edit?usp=sharing")
+
+library(scatterpie)
+#ggplot(BRA) +
+ # geom_sf(fill = "gray80", alpha = 0.5, color = "white") +
+  #coord_sf() +
+  #geom_scatterpie(aes(x=lon, y=lat, r=0.6),
+                  #alpha= 0.8, color = NA, data = mapa, 
+                  #cols = c ("DFC",
+                            #"MA",
+                            #"FER",
+                            #"ANTR",
+                            #"OIDIO")) + 
+  #geom_spatial_text_repel( data= mapa, aes(lon, lat, label = Local), 
+                          # size = 2, nudge_x = 0.2, nudge_y = 0.27, color = "gray30", #family = "Arial") +
+  #ggthemes::scale_fill_calc() +
+  #ggthemes::theme_map() +
+  #labs(x = "Longitude", y = "Latitude", legend = "",
+       #fill = "Doença") +
+  #theme(legend.position = "bottom", text = element_text (family = "Arial", size = 8))
+#ggsave("mapa.png", width = 8, height = 8, bg = "white")
+
+
+library(ggrepel)
+library(scatterpie)
+
+ggplot(BRA) +
+  geom_sf(fill = "gray70", alpha = 0.5, color = "white") +
+  coord_sf()+
+  geom_scatterpie(aes(x = lon, y = lat, r = 0.6), alpha = 0.8, color = NA, data = mapa,
+                  cols = c("DFC",
+                           "MA",
+                           "FER",
+                           "ANTR",
+                           "OIDIO"))+
+  geom_text_repel(data = mapa, aes(lon, lat, label = Local),
+                   size = 2, nudge_x = 0.2, nudge_y = 0.27, color = "gray30") +
+  ggthemes::scale_fill_calc()+
+  ggthemes::theme_map() +
+  labs(x = "Longitude", y = "Latitude", legend = "", fill = "Doença")+
+  theme(legend.position = "bottom", text = element_text(size = 8))
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```

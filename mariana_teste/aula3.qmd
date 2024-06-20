@@ -1,0 +1,119 @@
+---
+title: "Aula3 - aprendendo a visualizar os dados"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+message: false 
+warning: false
+---
+
+# Importa os dados
+
+o conjuto de dados está em uma página da web
+
+```{r}
+
+library(tidyverse)
+
+cr <- read_csv("https://raw.githubusercontent.com/emdelponte/paper-coffee-rust-Ethiopia/master/data/survey_clean.csv")
+
+glimpse(cr)
+library (ggthemes)
+cr |> 
+  ggplot (aes (x = sev2, fill = region)) + 
+  geom_histogram( color = "white") + 
+  facet_grid(region~cultivar) + 
+  scale_fill_colorblind () +
+  theme_minimal(base_size = 12)+
+  theme (legend.position = "bottom") +
+  labs (y= "Frequency", 
+        x= "Severity(%)", fill = "Region")
+ggsave("crl.png", bg = "white")
+
+summary(cr$inc)
+
+cr |> 
+  group_by (region) |> 
+  summarize (sev_med = median(sev2),
+             sev_mean = mean (sev2),
+             sev_sd = sd (sev2))
+cr |> 
+  ggplot (aes (inc, sev2)) +
+  geom_point()
+
+
+```
+
+# Visualização
+
+vamos utilizar a bibilbioteca ggplot para visualizar os dados
+
+#cria subconjuntos uTILIZA AS FUNÇÕES "SELECT" E "FILTER" DO PACOTE **dplyr** para selecionar colunas e linhas, respectivamente.
+
+```{r}
+#filtra oromia 
+
+cr_oromia <- cr|>
+  select (farm, region, cultivar, sev2) |>
+  filter(region == "Oromia")
+cr_oromia
+
+#filtra SNNPR
+cr_pr <- cr |> 
+  select (farm, region, cultivar, sev2) |>
+  filter (region == "SNNPR")
+cr_pr
+
+  
+
+```
+
+##Visuzaliza os subconjuntos
+
+Gráfico ggplot para cada subconjunto
+
+```{r}
+p1 <- cr_oromia |> 
+  ggplot (aes(cultivar, sev2, 
+              fill = cultivar))+
+  geom_boxplot()+
+  scale_fill_few () +
+  labs (y = "Severity (%)",
+      x= "")+
+  coord_flip()
+
+p2 <- cr_pr |> 
+  ggplot (aes(cultivar, sev2,
+              fill = cultivar)) +
+  geom_boxplot() +
+  scale_fill_few () +
+  labs (y= "Severity (%)",
+        x= "")+
+  coord_flip()
+p1
+p2
+
+library(patchwork)
+
+(p1 / p2) + 
+plot_layout(guides = "collect",
+            axes = "collect") +
+  plot_annotation(title = "Coffe rust in Ethiopia", 
+                  caption = "source: Del Ponte (2022)")
+ggsave("patchl.png", bg = "white",
+       width = 6,
+       height = 4)
+
+p3 <- cr_oromia |> 
+  ggplot (aes(x = sev2))+
+  geom_histogram()
+
+p1 + inset_element(p3, left = 0.6, bottom = 0.6, right = 1, top = 1)
+
+
+#se colocar a o sinal de + e a barra |, também vai. Se colocar a barra / coloca um embaixo do outro
+#usa o coord_flip para girar as coordenadas do gráfico 
+
+  
+```

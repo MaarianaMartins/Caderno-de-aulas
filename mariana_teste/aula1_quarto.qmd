@@ -1,0 +1,61 @@
+---
+title: "Aula 1 - introdução ao R"
+format: html
+editor: visual
+warning: false 
+message: false 
+editor_options: 
+  chunk_output_type: console
+---
+
+## Running Code
+
+#Aprendendo a atribuir valores
+
+```{r}
+A <- 1
+B <- 2
+C <- 3
+
+```
+
+valores adiconados aqui, irão aparecer como objetos com dados #uso de dois \*\* para deixar em negrito **exemplo** #uso de um \* deixa ele em itálico *exemplo*
+
+#Para criar um data.frame
+
+**IMPORTANTE** Tem que ser o mesmo número de linhas e vetores para a criação do dataframe que funciona como uma espécie de tabela.
+
+```{r}
+df <- data.frame(A, B)
+```
+
+#Como pedir ajuda
+
+Aparece a resposta do que a função faz na aba de ajuda "help" Além da opção apresentada no chunck pode pedir ajuda da seguinte forma: ?função.
+
+```{r}
+help(data.frame)
+
+```
+
+#Também podemos fazer operações Pode fazer operações com os número e também com os vetores com valores atribuidos. O R funciona basicamente como uma calculadora inteligente, portanto, pode ser feita operações matemáticas básicas e complexas.
+
+```{r}
+1 + 1
+2/3
+3*4
+
+A + B
+C * A
+B / C
+
+```
+
+#Usado para confirmar a informação colocada
+
+A função 'echo:false' desativa o código de impressão (somente a resposta aparece no console).
+
+```{r}
+#| echo: false
+2 * 2
+```
